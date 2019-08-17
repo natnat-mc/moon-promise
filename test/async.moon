@@ -1,4 +1,4 @@
-import async, await, Promise from require 'Promise'
+import async, await, Promise from require 'moon-promise'
 copas=require 'copas'
 
 increment=(val) ->

@@ -1,6 +1,6 @@
 local async, await, Promise
 do
-  local _obj_0 = require('Promise')
+  local _obj_0 = require('moon-promise')
   async, await, Promise = _obj_0.async, _obj_0.await, _obj_0.Promise
 end
 local copas = require('copas')

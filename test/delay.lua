@@ -1,5 +1,5 @@
 local Promise
-Promise = require('Promise').Promise
+Promise = require('moon-promise').Promise
 local copas = require('copas');
 ((((((Promise(function(ok, ko)
   copas.sleep(1)

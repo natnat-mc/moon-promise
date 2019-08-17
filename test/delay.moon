@@ -1,4 +1,4 @@
-import Promise from require 'Promise'
+import Promise from require 'moon-promise'
 copas=require 'copas'
 
 ((((((Promise (ok, ko) ->
