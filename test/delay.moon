@@ -1,8 +1,5 @@
-Promise=require '.'
-eloop=require 'eloop'
+import Promise from require 'Promise'
 copas=require 'copas'
-
-eloop.install()
 
 ((((((Promise (ok, ko) ->
 	copas.sleep 1
@@ -24,13 +21,11 @@ eloop.install()
 	copas.sleep 1
 )\andthen ((a) ->
 	print "Oops"
-	eloop.stop!
 	), (a) ->
 	print a -- 4
 	copas.sleep 1
 	error a+1
 )\catch (a) ->
 	print a -- 5
-	eloop.stop!
 
 copas.loop()

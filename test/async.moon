@@ -1,6 +1,5 @@
-Promise=require '.'
+import async, await, Promise from require 'Promise'
 copas=require 'copas'
-import async, await from require 'async'
 
 increment=(val) ->
 	return Promise (res, rej) ->
@@ -17,7 +16,5 @@ fn=async (i) ->
 
 (fn 1)\andthen (i) ->
 	print i-- 4
-	os.exit 0
 
-(require 'eloop').install!
 copas.loop()

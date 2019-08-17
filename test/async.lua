@@ -1,10 +1,9 @@
-local Promise = require('.')
-local copas = require('copas')
-local async, await
+local async, await, Promise
 do
-  local _obj_0 = require('async')
-  async, await = _obj_0.async, _obj_0.await
+  local _obj_0 = require('Promise')
+  async, await, Promise = _obj_0.async, _obj_0.await, _obj_0.Promise
 end
+local copas = require('copas')
 local increment
 increment = function(val)
   return Promise(function(res, rej)
@@ -21,8 +20,6 @@ local fn = async(function(i)
   return increment(i)
 end);
 (fn(1)):andthen(function(i)
-  print(i)
-  return os.exit(0)
-end);
-(require('eloop')).install()
+  return print(i)
+end)
 return copas.loop()

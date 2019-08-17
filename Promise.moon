@@ -1,39 +1,16 @@
-[[
-	Considerations:
-		- "Promise(fn)" called with a function "fn(a, b)" will create a promise that will be resolved with "value" when "a(value)" is called or rejected if "fn" throws or "b(reason)" is called
-		- "Promise.resolve(val)" returns a promise that is resolved with either "val" or the resolved value of "val"
-		- "Promise.reject(reason)" returns a promise that is rejected with "reason"
-		- "Promise.all(list)" returns a promise that is resolved when all the promises in the list are resolved, or rejected when one of them is rejected
-		- "Promise.race(list)" returns a promise that mirrors the state of the first settled promise in the list
-		
-		- "Promise._invoke(fn)" is a function that attempts to call "fn" without arguments asynchronously with an empty execution stack
-		- "Promise._invoke" can safely be overwritten with any function that does this, and in fact should be, since its default implementation isnt conformant
-		
-		- "promise.then(a, b)" is invalid in lua and in moonscript, so it becomes "promise.andThen(a, b)" and "promise.andthen(a, b)" is a valid alias
-		- "promise.catch(a)" is an alias to "promise.andThen(nil, a)"
-		- "promise.finally(a)" behaves as "promise.andThen(b, b)" where "b" is a function that calls "a(val, err)" and returns a promise that is either rejected if "a" throws or assumes the state of "promise"
-		
-		- "promise._status" is either "pending", "resolved" or "rejected"
-		- "promise._value" is the value of the promise, if it is resolved
-		- "promise._reason" is the reason of the rejection of the promise, if it is rejected
-		- "promise._resolve(val)" resolves "promise" with either "val" or the resolved value of "val"
-		- "promise._reject(reason)" rejects "promise" with "reason"
-		- "promise._resolvehandlers" is a table containing all the functions to be called when "promise" is resolved
-		- "promise._rejecthandlers" is a table containing all the functions to be called when "promise" is rejected
-		- the "_status", "promise._reason", "_resolve", "_reject", "_resolvehandlers" and "_rejecthandlers" properties are to be considered private and as such should not be used by external code
-		
-]]
+copas=require 'copas'
 
+local Promise, async, await
+
+events={}
+
+--BEGIN Promise implementation
 class Promise
-	-- call a function "asynchronously", "on an empty stack"
+	-- call a function asynchronously in its own copas thread
 	@_invoke=(fn) ->
-		if process and process.nextTick
-			process.nextTick fn
-		elseif setTimeout
-			setTimeout fn, 0
-		else
-			-- this is probably not compliant, but hey, it's all we got
-			pcall fn
+		copas.addthread () ->
+			copas.sleep 0
+			fn!
 	
 	-- return a Promise that resolves with val
 	@resolve=(val) ->
@@ -202,3 +179,44 @@ class Promise
 		@_status, @_reason='rejected', reason
 		for handler in *@_rejecthandlers
 			Promise._invoke () -> handler reason
+--END Promise implementation
+
+--BEGIN async/await implementation
+async=(fn) ->
+	(...) ->
+		p=Promise!
+		argc, argv=(select '#', ...), {...}
+		unpack=table.unpack or unpack
+		copas.addthread () ->
+			copas.sleep 0
+			ok, val=pcall fn, unpack argv, 1, argc
+			if ok
+				return p\_resolve val
+			else
+				return p\_reject val
+		return p
+
+await=(p) ->
+	local ok, val
+	
+	resfn=(resval) ->
+		ok=true
+		val=resval
+	rejfn=(rejval) ->
+		ok=false
+		val=rejval
+	
+	(Promise.resolve p)\andthen resfn, rejfn
+	
+	while ok==nil
+		copas.sleep 0
+	if ok
+		return val
+	else
+		error val
+--END async/await implementation
+
+return {
+	:Promise
+	:async, :await
+}

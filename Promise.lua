@@ -1,28 +1,6 @@
-local _ = [[	Considerations:
-		- "Promise(fn)" called with a function "fn(a, b)" will create a promise that will be resolved with "value" when "a(value)" is called or rejected if "fn" throws or "b(reason)" is called
-		- "Promise.resolve(val)" returns a promise that is resolved with either "val" or the resolved value of "val"
-		- "Promise.reject(reason)" returns a promise that is rejected with "reason"
-		- "Promise.all(list)" returns a promise that is resolved when all the promises in the list are resolved, or rejected when one of them is rejected
-		- "Promise.race(list)" returns a promise that mirrors the state of the first settled promise in the list
-		
-		- "Promise._invoke(fn)" is a function that attempts to call "fn" without arguments asynchronously with an empty execution stack
-		- "Promise._invoke" can safely be overwritten with any function that does this, and in fact should be, since its default implementation isnt conformant
-		
-		- "promise.then(a, b)" is invalid in lua and in moonscript, so it becomes "promise.andThen(a, b)" and "promise.andthen(a, b)" is a valid alias
-		- "promise.catch(a)" is an alias to "promise.andThen(nil, a)"
-		- "promise.finally(a)" behaves as "promise.andThen(b, b)" where "b" is a function that calls "a(val, err)" and returns a promise that is either rejected if "a" throws or assumes the state of "promise"
-		
-		- "promise._status" is either "pending", "resolved" or "rejected"
-		- "promise._value" is the value of the promise, if it is resolved
-		- "promise._reason" is the reason of the rejection of the promise, if it is rejected
-		- "promise._resolve(val)" resolves "promise" with either "val" or the resolved value of "val"
-		- "promise._reject(reason)" rejects "promise" with "reason"
-		- "promise._resolvehandlers" is a table containing all the functions to be called when "promise" is resolved
-		- "promise._rejecthandlers" is a table containing all the functions to be called when "promise" is rejected
-		- the "_status", "promise._reason", "_resolve", "_reject", "_resolvehandlers" and "_rejecthandlers" properties are to be considered private and as such should not be used by external code
-		
-]]
-local Promise
+local copas = require('copas')
+local Promise, async, await
+local events = { }
 do
   local _class_0
   local _base_0 = {
@@ -232,13 +210,10 @@ do
   _base_0.__class = _class_0
   local self = _class_0
   self._invoke = function(fn)
-    if process and process.nextTick then
-      return process.nextTick(fn)
-    elseif setTimeout then
-      return setTimeout(fn, 0)
-    else
-      return pcall(fn)
-    end
+    return copas.addthread(function()
+      copas.sleep(0)
+      return fn()
+    end)
   end
   self.resolve = function(val)
     return Promise(function(res, rej)
@@ -292,5 +267,50 @@ do
     end)
   end
   Promise = _class_0
-  return _class_0
 end
+async = function(fn)
+  return function(...)
+    local p = Promise()
+    local argc, argv = (select('#', ...)), {
+      ...
+    }
+    local unpack = table.unpack or unpack
+    copas.addthread(function()
+      copas.sleep(0)
+      local ok, val = pcall(fn, unpack(argv, 1, argc))
+      if ok then
+        return p:_resolve(val)
+      else
+        return p:_reject(val)
+      end
+    end)
+    return p
+  end
+end
+await = function(p)
+  local ok, val
+  local resfn
+  resfn = function(resval)
+    ok = true
+    val = resval
+  end
+  local rejfn
+  rejfn = function(rejval)
+    ok = false
+    val = rejval
+  end
+  (Promise.resolve(p)):andthen(resfn, rejfn)
+  while ok == nil do
+    copas.sleep(0)
+  end
+  if ok then
+    return val
+  else
+    return error(val)
+  end
+end
+return {
+  Promise = Promise,
+  async = async,
+  await = await
+}

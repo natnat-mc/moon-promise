@@ -1,7 +1,6 @@
-local Promise = require('.')
-local eloop = require('eloop')
-local copas = require('copas')
-eloop.install();
+local Promise
+Promise = require('Promise').Promise
+local copas = require('copas');
 ((((((Promise(function(ok, ko)
   copas.sleep(1)
   return ok(1)
@@ -21,14 +20,12 @@ end)):finally(function(a, b)
   print("a: " .. tostring(a) .. ", b: " .. tostring(b))
   return copas.sleep(1)
 end)):andthen((function(a)
-  print("Oops")
-  return eloop.stop()
+  return print("Oops")
 end), function(a)
   print(a)
   copas.sleep(1)
   return error(a + 1)
 end)):catch(function(a)
-  print(a)
-  return eloop.stop()
+  return print(a)
 end)
 return copas.loop()
